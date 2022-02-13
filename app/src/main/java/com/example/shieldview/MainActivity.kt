@@ -32,7 +32,7 @@ class MainActivity : ComponentActivity() {
                     val count by viewmodel.count.observeAsState()
                     ShieldView(
                         modifier = Modifier
-                          .width(200.dp).height(50.dp),
+                          .width(100.dp).height(200.dp),
                         scanColor = Color.Red
                     ) {
 

@@ -1,10 +1,8 @@
 package com.example.shieldview
 
 import android.content.Context
-import android.content.ContextWrapper
 import android.graphics.Paint
 import android.graphics.Typeface
-import androidx.activity.ComponentActivity
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.animateColor
 import androidx.compose.animation.core.*
@@ -42,7 +40,7 @@ fun ShieldView(
     val pathClip = PathParser().parsePathString(PATH_CLIP_PATH).toPath()
 
     val delayTimeSweep = remember { repeatDuration }
-    val percent = remember { (process.toFloat()*100).toInt() }
+    val percent = remember { (process.toFloat() * 100).toInt() }
     //animation repeat
     val infinityTransition = rememberInfiniteTransition()
 
@@ -58,7 +56,16 @@ fun ShieldView(
         )
     )
 
-    val stroke by infinityTransition.animateFloat(
+    val alphaAnimated by infinityTransition.animateColor(
+        initialValue = Color.White,
+        targetValue = Color.White.copy(alpha = 0.0f),
+        animationSpec = infiniteRepeatable(
+            animation = tween(delayTimeSweep),
+            repeatMode = RepeatMode.Restart
+        )
+    )
+
+    val strokeAnimated by infinityTransition.animateFloat(
         initialValue = 10f,
         targetValue = 1.5f,
         animationSpec = infiniteRepeatable(
@@ -70,20 +77,10 @@ fun ShieldView(
         )
     )
 
-
-    val alphaAnimated by infinityTransition.animateColor(
-        initialValue = Color.White,
-        targetValue = Color.White.copy(alpha = 0.0f),
-        animationSpec = infiniteRepeatable(
-            animation = tween(delayTimeSweep),
-            repeatMode = RepeatMode.Restart
-        )
-    )
-
-   val sweepAnimated by infinityTransition.animateFloat(
+    val sweepAnimated by infinityTransition.animateFloat(
 
         initialValue = 0f,
-        targetValue = 1.0f,
+        targetValue = 360f,
         animationSpec = infiniteRepeatable(
             animation = tween(delayTimeSweep),
             repeatMode = RepeatMode.Restart
@@ -96,9 +93,10 @@ fun ShieldView(
         Matrix()
     }
     Canvas(modifier.background(scanColor)) {
-        val dpiParent = size.width.coerceAtLeast(size.height)
-        val dpiView = boundShield.width.coerceAtLeast(boundShield.height)
-        val dpi = (dpiParent/dpiView)*0.5f
+        val weightParent = size.width.coerceAtMost(size.height)
+        val weightView = boundShield.width.coerceAtMost(boundShield.height)
+
+        val dpi = weightParent / (1.5f * weightView)
 
         setupMatrix(matrix, dpi, boundShield) {
             drawShield(pathShield, pathShade1, pathShade2)
@@ -106,7 +104,12 @@ fun ShieldView(
         }
 
         setupMatrix(matrix, dpi, boundClip) {
-           drawProgressWave(boundRect = boundClip,color = Color.White,pathClip = pathClip,sweepAnimated = sweepAnimated)
+            drawProgressWave(
+                boundRect = boundClip,
+                color = Color.White.copy(alpha = 0.5f),
+                pathClip = pathClip,
+                angle = sweepAnimated
+            )
         }
         setupMatrix(matrix = matrix, dpi, boundClip) {
             scale(
@@ -114,8 +117,11 @@ fun ShieldView(
                 scaleY = scaleAnimated,
                 pivot = boundClip.center
             ) {
-                drawPath(pathClip, color = alphaAnimated, style = Stroke(stroke))
+                drawPath(pathClip, color = alphaAnimated, style = Stroke(strokeAnimated))
             }
+        }
+        if (process == 1.0) {
+            onFinishDone.invoke()
         }
     }
 }
@@ -167,34 +173,30 @@ fun DrawScope.setupMatrix(matrix: Matrix, ratio: Float, rectBound: Rect, drawFun
 }
 
 private fun DrawScope.drawProgressWave(
-    sweepAnimated: Float,
+    angle: Float,
     pathClip: Path,
     color: Color,
     boundRect: Rect
 ) {
-
     val sizeOffset = boundRect.width.coerceAtMost(boundRect.height)
 
-    val endAngle = convertValue(sweepAnimated, 0f, 1f, 0f, 360f)
-    val startAngle = if (endAngle < 180)
-        endAngle / 3f
-     else
-        convertValue(endAngle, 180f, 360f, 60f, 360f)
+    val startAngle = if (angle < 180)
+        angle / 3f
+    else
+        convertValue(angle, 180f, 360f, 60f, 360f)
 
+    val coordinateAngle = startAngle - 90
 
-    val coordinateValue = startAngle - 90
-
-    val sweepAngle = endAngle - startAngle
+    val sweepAngle = angle - startAngle
 
     clipPath(pathClip) {
         drawArc(
             color,
-            startAngle = coordinateValue,
+            startAngle = coordinateAngle,
             sweepAngle = sweepAngle,
+            useCenter = true,
             topLeft = Offset(boundRect.top - sizeOffset / 4, boundRect.left - sizeOffset / 4),
             size = Size(boundRect.width + sizeOffset / 2, boundRect.height + sizeOffset / 2),
-            useCenter = true,
-            alpha = 0.3f
         )
     }
 }
@@ -218,8 +220,6 @@ const val PATH_SHADE_2 =
     "M205.923,57.823C205.269,63.71 204.353,73.26 203.437,82.81C203.176,86.211 201.475,87.781 197.943,87.781C187.477,87.912 177.142,86.604 166.807,84.38C164.06,83.726 162.752,82.548 163.013,79.409C164.322,66.85 165.368,54.291 164.06,41.601C163.406,35.845 165.761,34.929 170.994,36.368C180.805,39.377 190.748,41.601 200.821,43.432C206.185,44.479 206.185,44.741 205.923,57.823Z"
 const val PATH_CLIP_PATH =
     "M41.35,71.472C76.586,68.497 128.82,47.918 150.533,38C200.162,63.414 252.272,70.232 259.716,71.472C262.818,222.096 167.283,281.602 150.533,286.561C36.387,232.014 41.35,75.191 41.35,71.472Z"
-const val PATH_SHIELD_2 =
-    "M255.865,69.266C221.852,63.51 189.016,53.829 157.488,39.57C155.264,38.523 153.17,38 150.946,38C148.853,38 146.629,38.523 144.405,39.57C113.008,53.829 80.172,63.51 46.158,69.266C41.841,70.051 40.01,71.621 40.01,76.462C39.748,112.699 44.719,148.152 57.801,182.035C74.808,226.645 102.673,262.359 144.798,286.168C147.022,287.477 149.115,288 151.077,288C153.04,288 155.133,287.346 157.357,286.168C199.481,262.359 227.215,226.645 244.353,182.035C257.304,148.021 262.276,112.699 262.145,76.462C262.014,71.621 260.313,70.051 255.865,69.266ZM254.688,102.103C252.726,132.061 246.577,161.103 234.672,188.706C218.581,225.86 194.248,256.08 159.45,277.665C156.31,279.627 153.694,280.543 150.946,280.543C148.199,280.543 145.583,279.627 142.443,277.665C107.775,256.08 83.312,225.991 67.221,188.706C55.447,161.103 49.298,132.192 47.336,102.103C46.813,94.907 46.289,87.843 46.158,80.517C46.158,77.116 47.205,75.546 50.868,74.892C84.358,68.612 116.802,59.193 147.807,45.064C148.984,44.541 150.031,44.41 151.077,44.541C152.124,44.541 153.04,44.672 154.217,45.195C185.222,59.324 217.796,68.874 251.156,75.022C254.688,75.677 255.865,77.116 255.865,80.648C255.735,87.843 255.211,94.907 254.688,102.103Z"
 
 fun Context.dp2Px(dp: Float): Int {
     return (dp * resources.displayMetrics.density + 0.5f).toInt()

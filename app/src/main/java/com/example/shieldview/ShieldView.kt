@@ -4,9 +4,7 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.graphics.Paint
 import android.graphics.Typeface
-import android.util.Log
 import androidx.activity.ComponentActivity
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.animateColor
 import androidx.compose.animation.core.*
@@ -22,7 +20,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.*
 import androidx.compose.ui.graphics.vector.PathParser
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.res.ResourcesCompat
@@ -32,7 +29,7 @@ import androidx.core.content.res.ResourcesCompat
 @Composable
 fun ShieldView(
     modifier: Modifier = Modifier,
-    process: Int = 50,
+    process: Double = 0.65,
     scanColor: Color = Color.Green,
     repeatDuration: Int = 1500,
     onFinishDone: () -> Unit
@@ -45,21 +42,18 @@ fun ShieldView(
     val pathClip = PathParser().parsePathString(PATH_CLIP_PATH).toPath()
 
     val delayTimeSweep = remember { repeatDuration }
-
-    val sweepRadian by remember { mutableStateOf(180f) }
-    val sweepRadianInit by remember { mutableStateOf(0f) }
-
+    val percent = remember { (process.toFloat()*100).toInt() }
     //animation repeat
     val infinityTransition = rememberInfiniteTransition()
-
-    val dpiinitScale by remember { mutableStateOf(2f) }
-
 
     val scaleAnimated by infinityTransition.animateFloat(
         initialValue = 1f,
         targetValue = 1.5f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = delayTimeSweep, easing = CubicBezierEasing(0.4f, 0.0f, 0.2f, 1.0f)),
+            animation = tween(
+                durationMillis = delayTimeSweep,
+                easing = CubicBezierEasing(0.4f, 0.0f, 0.2f, 1.0f)
+            ),
             repeatMode = RepeatMode.Restart
         )
     )
@@ -68,7 +62,10 @@ fun ShieldView(
         initialValue = 10f,
         targetValue = 1.5f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = delayTimeSweep, easing = CubicBezierEasing(0.4f, 0.0f, 0.2f, 1.0f)),
+            animation = tween(
+                durationMillis = delayTimeSweep,
+                easing = CubicBezierEasing(0.4f, 0.0f, 0.2f, 1.0f)
+            ),
             repeatMode = RepeatMode.Restart
         )
     )
@@ -83,29 +80,15 @@ fun ShieldView(
         )
     )
 
-    val coordinateAnimated by infinityTransition.animateFloat(
-        initialValue = -90f,
-        targetValue = 90f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(delayTimeSweep),
-            repeatMode = RepeatMode.Restart
-        )
-    )
-
-    // cay quá, jump dến chỗ dùng bằng phím tắt nwindoào thế? nút giữa con chuột ấy, đệt e đ dùng chuột window + chuột trái
-    // địt cái này e hiểu là nó 2 value là min và max, nếu mình giảm đi thì nó đ quay đủ vòng, quan trọng là cái anim nó đ có giảm ngược lại thế thì mới tìm công thức toán, chứ k phải code, giờ cần tính gì, tính góc max?
-    //input là initvalue và targetvalue , sweepAnimated là giá trị output, minh cần tìm công thức dựa trên cái sweep. Thế thì cái inital value với targetValue k đáp ứng đc đâu, mình phải custom lại thôi
-    // nói chung là bh chỉn hcasi initial value hay target value thế đ nào cũng k đ ứng đc. chỗ nó vẽ đâu, a mở e xem, vẽ góc quay ấy
-    val sweepAnimated by infinityTransition.animateFloat( // giờ e bôi đen thì a jump nhá
+   val sweepAnimated by infinityTransition.animateFloat(
 
         initialValue = 0f,
-        targetValue = 180f,
+        targetValue = 1.0f,
         animationSpec = infiniteRepeatable(
             animation = tween(delayTimeSweep),
             repeatMode = RepeatMode.Restart
         )
     )
-// cai nao the
 
     val boundShield = pathShield.getBounds()
     val boundClip = pathClip.getBounds()
@@ -113,21 +96,17 @@ fun ShieldView(
         Matrix()
     }
     Canvas(modifier.background(scanColor)) {
-        val dpi =
-            (size.width / boundShield.width).coerceAtLeast(size.height / boundShield.height) / 3
+        val dpiParent = size.width.coerceAtLeast(size.height)
+        val dpiView = boundShield.width.coerceAtLeast(boundShield.height)
+        val dpi = (dpiParent/dpiView)*0.5f
 
         setupMatrix(matrix, dpi, boundShield) {
             drawShield(pathShield, pathShade1, pathShade2)
-            drawPercent(context = context, percent = process, typeFace = typeFace, boundShield)
+            drawPercent(context = context, percent = percent, typeFace = typeFace, boundShield)
         }
 
         setupMatrix(matrix, dpi, boundClip) {
-            drawWavePercent(
-                pathClip = pathClip,
-                coordinateAnimated = coordinateAnimated,
-                sweepAnimated = sweepAnimated,
-                rect = boundClip
-            )
+           drawProgressWave(boundRect = boundClip,color = Color.White,pathClip = pathClip,sweepAnimated = sweepAnimated)
         }
         setupMatrix(matrix = matrix, dpi, boundClip) {
             scale(
@@ -141,32 +120,7 @@ fun ShieldView(
     }
 }
 
-fun DrawScope.drawWavePercent(
-    pathClip: Path,
-    coordinateAnimated: Float,
-    sweepAnimated: Float,
-    rect: Rect
-) {
-    clipPath(pathClip) {
-        val sizeOffset = rect.width.coerceAtMost(rect.height)
-        drawArc(
-            color = Color.White.copy(alpha = 0.4f),
-            startAngle = coordinateAnimated,
-            sweepAngle = sweepAnimated,
-            useCenter = true,
-            topLeft = Offset(
-                rect.top - sizeOffset / 4,
-                rect.left - sizeOffset / 4
-            ),
-            size = Size(rect.width + sizeOffset / 2, rect.height + sizeOffset / 2)
-        )
-    }
-}
 
-
-fun calculator(value: Int){
-
-}
 fun DrawScope.drawShield(pathShield: Path, pathShade1: Path, pathShade2: Path) {
     drawPath(pathShield, Color.White)
     drawPath(pathShade1, Color.White.copy(alpha = 0.5f))
@@ -212,12 +166,45 @@ fun DrawScope.setupMatrix(matrix: Matrix, ratio: Float, rectBound: Rect, drawFun
     })
 }
 
+private fun DrawScope.drawProgressWave(
+    sweepAnimated: Float,
+    pathClip: Path,
+    color: Color,
+    boundRect: Rect
+) {
+
+    val sizeOffset = boundRect.width.coerceAtMost(boundRect.height)
+
+    val endAngle = convertValue(sweepAnimated, 0f, 1f, 0f, 360f)
+    val startAngle = if (endAngle < 180)
+        endAngle / 3f
+     else
+        convertValue(endAngle, 180f, 360f, 60f, 360f)
+
+
+    val coordinateValue = startAngle - 90
+
+    val sweepAngle = endAngle - startAngle
+
+    clipPath(pathClip) {
+        drawArc(
+            color,
+            startAngle = coordinateValue,
+            sweepAngle = sweepAngle,
+            topLeft = Offset(boundRect.top - sizeOffset / 4, boundRect.left - sizeOffset / 4),
+            size = Size(boundRect.width + sizeOffset / 2, boundRect.height + sizeOffset / 2),
+            useCenter = true,
+            alpha = 0.3f
+        )
+    }
+}
+
 
 @Composable
 @Preview()
 fun PreviewShield() {
     Box {
-        ShieldView(modifier = Modifier.fillMaxSize(), process = 0) {
+        ShieldView(modifier = Modifier.fillMaxSize(), process = 0.0) {
         }
     }
 }
@@ -238,24 +225,7 @@ fun Context.dp2Px(dp: Float): Int {
     return (dp * resources.displayMetrics.density + 0.5f).toInt()
 }
 
-fun Context.getActivity(): ComponentActivity? {
-    var currentContext = this
-    while (currentContext is ContextWrapper) {
-        if (currentContext is ComponentActivity) {
-            return currentContext
-        }
-        currentContext = currentContext.baseContext
-    }
-    return null
-}
-
-private fun convertValue(
-    currValue: Float,
-    min1: Float,
-    max1: Float,
-    min2: Float,
-    max2: Float
-): Float {
-    return (currValue - min1) / (max1 - min1) * (max2 - min2) + min2
+fun convertValue(value: Float, min1: Float, max1: Float, min2: Float, max2: Float): Float {
+    return ((value - min1) * ((max2 - min2) / (max1 - min1)) + min2)
 }
 

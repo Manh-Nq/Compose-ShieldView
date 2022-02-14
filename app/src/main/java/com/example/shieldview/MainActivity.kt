@@ -35,8 +35,7 @@ class MainActivity : ComponentActivity() {
                     Log.d("ManhNQ", "onCreate:  $count")
                     ShieldView(
                         modifier = Modifier
-                            .width(100.dp)
-                            .height(200.dp),
+                           .fillMaxSize(),
                         scanColor = Color.Red, process = count!!
                     ) {
 

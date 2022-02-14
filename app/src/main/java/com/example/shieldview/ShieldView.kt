@@ -183,7 +183,6 @@ private fun DrawScope.drawProgressWave(
     color: Color,
     boundRect: Rect
 ) {
-    val sizeOffset = boundRect.width.coerceAtMost(boundRect.height)
 
     val coordinateAngle = if (angle < 180)
         angle / 3f
@@ -196,7 +195,7 @@ private fun DrawScope.drawProgressWave(
     val paramOffsetMax = boundRect.width.coerceAtLeast(boundRect.height)
     val paramOffsetMin = boundRect.width.coerceAtMost(boundRect.height)
 
-    val offset =paramOffsetMax-paramOffsetMin
+    val offset = paramOffsetMax - paramOffsetMin
 
     Log.d("ManhNQ", "drawProgressWave: width: ${boundRect.width} -- height: ${boundRect.height}")
 
@@ -206,8 +205,8 @@ private fun DrawScope.drawProgressWave(
             startAngle = startAngle,
             sweepAngle = sweepAngle,
             useCenter = true,
-            topLeft = Offset(boundRect.top -offset, boundRect.left - offset),
-            size = Size(boundRect.width + offset*2, boundRect.height + offset*2),
+            topLeft = Offset(boundRect.top - offset, boundRect.left - offset),
+            size = Size(boundRect.width + offset * 2, boundRect.height + offset * 2),
         )
     }
 }

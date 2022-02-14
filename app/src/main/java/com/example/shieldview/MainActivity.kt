@@ -27,13 +27,17 @@ class MainActivity : ComponentActivity() {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.Blue)
+                        .background(Color.Blue),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     val count by viewmodel.count.observeAsState()
+                    Log.d("ManhNQ", "onCreate:  $count")
                     ShieldView(
                         modifier = Modifier
-                          .width(100.dp).height(200.dp),
-                        scanColor = Color.Red
+                            .width(100.dp)
+                            .height(200.dp),
+                        scanColor = Color.Red, process = count!!
                     ) {
 
                     }

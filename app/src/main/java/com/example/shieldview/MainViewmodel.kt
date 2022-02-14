@@ -8,15 +8,18 @@ import kotlinx.coroutines.launch
 
 class MainViewmodel : ViewModel() {
 
-    var count: MutableLiveData<Int> = MutableLiveData(0)
+    var count: MutableLiveData<Double> = MutableLiveData(0.0)
 
     init {
-        var cc = 0
+        var cc = 0.0
         viewModelScope.launch {
-            while (cc < 100) {
-                cc++
+            while (cc < 1.0) {
+                cc += 0.01
+                if (cc > 1.0) {
+                    cc = 1.0
+                }
                 count.value = cc
-                delay(1000)
+                delay(500)
             }
         }
     }

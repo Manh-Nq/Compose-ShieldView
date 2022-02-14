@@ -3,6 +3,7 @@ package com.example.shieldview
 import android.content.Context
 import android.graphics.Paint
 import android.graphics.Typeface
+import android.util.Log
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.animateColor
 import androidx.compose.animation.core.*
@@ -40,7 +41,9 @@ fun ShieldView(
     val pathClip = PathParser().parsePathString(PATH_CLIP_PATH).toPath()
 
     val delayTimeSweep = remember { repeatDuration }
-    val percent = remember { (process.toFloat() * 100).toInt() }
+
+    Log.d("ManhNQ", "ShieldView: $process")
+
     //animation repeat
     val infinityTransition = rememberInfiniteTransition()
 
@@ -93,6 +96,9 @@ fun ShieldView(
         Matrix()
     }
     Canvas(modifier.background(scanColor)) {
+
+        val percent = (process * 100).toInt()
+
         val weightParent = size.width.coerceAtMost(size.height)
         val weightView = boundShield.width.coerceAtMost(boundShield.height)
 
@@ -180,19 +186,21 @@ private fun DrawScope.drawProgressWave(
 ) {
     val sizeOffset = boundRect.width.coerceAtMost(boundRect.height)
 
-    val startAngle = if (angle < 180)
+    val coordinateAngle = if (angle < 180)
         angle / 3f
     else
         convertValue(angle, 180f, 360f, 60f, 360f)
 
-    val coordinateAngle = startAngle - 90
+    val startAngle = coordinateAngle - 90
 
-    val sweepAngle = angle - startAngle
+    val sweepAngle = angle - coordinateAngle
+
+//    Log.d("ManhNQ", "drawProgressWave: startAngle: $startAngle -- angle: $angle --  sweepAngle: $sweepAngle")
 
     clipPath(pathClip) {
         drawArc(
             color,
-            startAngle = coordinateAngle,
+            startAngle = startAngle,
             sweepAngle = sweepAngle,
             useCenter = true,
             topLeft = Offset(boundRect.top - sizeOffset / 4, boundRect.left - sizeOffset / 4),

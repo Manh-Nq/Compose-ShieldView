@@ -28,7 +28,7 @@ import androidx.core.content.res.ResourcesCompat
 @Composable
 fun ShieldView(
     modifier: Modifier = Modifier,
-    process: Double = 0.65,
+    process: Double = 0.0,
     scanColor: Color = Color.Green,
     repeatDuration: Int = 1500,
     onFinishDone: () -> Unit
@@ -42,7 +42,6 @@ fun ShieldView(
 
     val delayTimeSweep = remember { repeatDuration }
 
-    Log.d("ManhNQ", "ShieldView: $process")
 
     //animation repeat
     val infinityTransition = rememberInfiniteTransition()
@@ -192,10 +191,14 @@ private fun DrawScope.drawProgressWave(
         convertValue(angle, 180f, 360f, 60f, 360f)
 
     val startAngle = coordinateAngle - 90
-
     val sweepAngle = angle - coordinateAngle
 
-//    Log.d("ManhNQ", "drawProgressWave: startAngle: $startAngle -- angle: $angle --  sweepAngle: $sweepAngle")
+    val paramOffsetMax = boundRect.width.coerceAtLeast(boundRect.height)
+    val paramOffsetMin = boundRect.width.coerceAtMost(boundRect.height)
+
+    val offset =paramOffsetMax-paramOffsetMin
+
+    Log.d("ManhNQ", "drawProgressWave: width: ${boundRect.width} -- height: ${boundRect.height}")
 
     clipPath(pathClip) {
         drawArc(
@@ -203,8 +206,8 @@ private fun DrawScope.drawProgressWave(
             startAngle = startAngle,
             sweepAngle = sweepAngle,
             useCenter = true,
-            topLeft = Offset(boundRect.top - sizeOffset / 4, boundRect.left - sizeOffset / 4),
-            size = Size(boundRect.width + sizeOffset / 2, boundRect.height + sizeOffset / 2),
+            topLeft = Offset(boundRect.top -offset, boundRect.left - offset),
+            size = Size(boundRect.width + offset*2, boundRect.height + offset*2),
         )
     }
 }
